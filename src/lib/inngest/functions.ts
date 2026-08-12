@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/nextjs";
 import { createClerkClient } from "@clerk/nextjs/server";
 import { Resend } from "resend";
 
@@ -5,138 +6,158 @@ import { prisma } from "@/lib/prisma";
 import { calculateWarranty, formatDate } from "@/lib/product-helpers";
 import { inngest } from "./client";
 
+const MONITOR_SLUG = "vaultly-warranty-reminders";
+
 export const checkWarrantyReminders = inngest.createFunction(
   {
     id: "check-warranty-reminders",
     triggers: [{ cron: "0 9 * * *" }],
   },
   async ({ step }: { step: any }) => {
-    // Step 1: Fetch all registered products
-    const products = await step.run("fetch-all-products", async () => {
-      return await prisma.product.findMany();
-    });
+    // Sentry Cron Check-In: Start execution
+    const checkInId = Sentry.captureCheckIn(
+      {
+        monitorSlug: MONITOR_SLUG,
+        status: "in_progress",
+      },
+      {
+        schedule: {
+          type: "crontab",
+          value: "0 9 * * *",
+        },
+        checkinMargin: 15,
+        maxRuntime: 30,
+        timezone: "Etc/UTC",
+      }
+    );
 
-    let sentCount = 0;
-
-    for (const product of products) {
-      const warranty = calculateWarranty(
-        product.purchaseDate,
-        product.warrantyMonths,
-      );
-      const days = warranty.daysRemaining;
-
-      let notificationType: string | null = null;
-      let title = "";
-      let message = "";
-
-      // Fetch user preferences for reminder toggles
-      const userPref = await step.run(`fetch-pref-${product.userId}`, async () => {
-        return await prisma.userPreferences.findUnique({
-          where: { userId: product.userId },
-        });
+    try {
+      // Step 1: Fetch all registered products
+      const products = await step.run("fetch-all-products", async () => {
+        return await prisma.product.findMany();
       });
 
-      if (days === 30) {
-        if (userPref && !userPref.remind30Days) continue;
-        notificationType = "WARRANTY_EXPIRING_30";
-        title = `Warranty Expiring Soon: ${product.name}`;
-        message = `The warranty for "${product.name}" expires in 30 days on ${formatDate(warranty.expirationDate)}.`;
-      } else if (days === 7) {
-        if (userPref && !userPref.remind7Days) continue;
-        notificationType = "WARRANTY_EXPIRING_7";
-        title = `Warranty Expiring in 7 Days: ${product.name}`;
-        message = `The warranty for "${product.name}" expires in 7 days on ${formatDate(warranty.expirationDate)}.`;
-      } else if (days === 1) {
-        if (userPref && !userPref.remind1Day) continue;
-        notificationType = "WARRANTY_EXPIRING_1";
-        title = `Warranty Expiring Tomorrow: ${product.name}`;
-        message = `The warranty for "${product.name}" expires tomorrow (${formatDate(warranty.expirationDate)}).`;
-      } else if (days === 0) {
-        notificationType = "WARRANTY_EXPIRED";
-        title = `Warranty Expired: ${product.name}`;
-        message = `The warranty for "${product.name}" has officially expired.`;
-      }
+      let sentCount = 0;
 
-      if (!notificationType) continue;
+      for (const product of products) {
+        const warranty = calculateWarranty(
+          product.purchaseDate,
+          product.warrantyMonths,
+        );
+        const days = warranty.daysRemaining;
 
-      const typeKey = notificationType;
-      const notifTitle = title;
-      const notifMessage = message;
+        let notificationType: string | null = null;
+        let title = "";
+        let message = "";
 
-      // Step 2: Check for existing notification to avoid duplicate reminders
-      const existingNotif = await step.run(
-        `check-duplicate-${product.id}-${typeKey}`,
-        async () => {
-          return await prisma.notification.findFirst({
-            where: {
+        // Fetch user preferences for reminder toggles
+        const userPref = await step.run(`fetch-pref-${product.userId}`, async () => {
+          return await prisma.userPreferences.findUnique({
+            where: { userId: product.userId },
+          });
+        });
+
+        if (days === 30) {
+          if (userPref && !userPref.remind30Days) continue;
+          notificationType = "WARRANTY_EXPIRING_30";
+          title = `Warranty Expiring Soon: ${product.name}`;
+          message = `The warranty for "${product.name}" expires in 30 days on ${formatDate(warranty.expirationDate)}.`;
+        } else if (days === 7) {
+          if (userPref && !userPref.remind7Days) continue;
+          notificationType = "WARRANTY_EXPIRING_7";
+          title = `Warranty Expiring in 7 Days: ${product.name}`;
+          message = `The warranty for "${product.name}" expires in 7 days on ${formatDate(warranty.expirationDate)}.`;
+        } else if (days === 1) {
+          if (userPref && !userPref.remind1Day) continue;
+          notificationType = "WARRANTY_EXPIRING_1";
+          title = `Warranty Expiring Tomorrow: ${product.name}`;
+          message = `The warranty for "${product.name}" expires tomorrow (${formatDate(warranty.expirationDate)}).`;
+        } else if (days === 0) {
+          notificationType = "WARRANTY_EXPIRED";
+          title = `Warranty Expired: ${product.name}`;
+          message = `The warranty for "${product.name}" has officially expired.`;
+        }
+
+        if (!notificationType) continue;
+
+        const typeKey = notificationType;
+        const notifTitle = title;
+        const notifMessage = message;
+
+        // Step 2: Check for existing notification to avoid duplicate reminders
+        const existingNotif = await step.run(
+          `check-duplicate-${product.id}-${typeKey}`,
+          async () => {
+            return await prisma.notification.findFirst({
+              where: {
+                productId: product.id,
+                type: typeKey,
+              },
+            });
+          },
+        );
+
+        if (existingNotif) continue;
+
+        // Step 3: Create notification record in database
+        await step.run(`create-notification-${product.id}-${typeKey}`, async () => {
+          return await prisma.notification.create({
+            data: {
+              userId: product.userId,
               productId: product.id,
+              title: notifTitle,
+              message: notifMessage,
               type: typeKey,
             },
           });
-        },
-      );
-
-      if (existingNotif) continue;
-
-      // Step 3: Create notification record in database
-      await step.run(`create-notification-${product.id}-${typeKey}`, async () => {
-        return await prisma.notification.create({
-          data: {
-            userId: product.userId,
-            productId: product.id,
-            title: notifTitle,
-            message: notifMessage,
-            type: typeKey,
-          },
         });
-      });
 
-      // Step 4: Fetch user email via Clerk Backend SDK & send email via Resend
-      await step.run(`send-email-${product.id}-${typeKey}`, async () => {
-        try {
-          const clerkSecretKey = process.env.CLERK_SECRET_KEY;
-          const resendApiKey = process.env.RESEND_API_KEY;
+        // Step 4: Fetch user email via Clerk Backend SDK & send email via Resend
+        await step.run(`send-email-${product.id}-${typeKey}`, async () => {
+          try {
+            const clerkSecretKey = process.env.CLERK_SECRET_KEY;
+            const resendApiKey = process.env.RESEND_API_KEY;
 
-          if (!clerkSecretKey || !resendApiKey) {
-            console.log(
-              `Skipping email dispatch: CLERK_SECRET_KEY or RESEND_API_KEY not configured. Created in-app notification for product ${product.id}.`,
-            );
-            return;
-          }
-
-          const clerk = createClerkClient({ secretKey: clerkSecretKey });
-          const user = await clerk.users.getUser(product.userId);
-          const primaryEmail = user?.emailAddresses?.[0]?.emailAddress;
-
-          if (!primaryEmail) {
-            console.log(`No primary email address found for user ${product.userId}`);
-            return;
-          }
-
-          const resendFromEnv = process.env.RESEND_FROM_EMAIL;
-          let fromAddress = "Vaultly Reminders <onboarding@resend.dev>";
-          if (resendFromEnv) {
-            if (resendFromEnv.includes("<")) {
-              fromAddress = resendFromEnv;
-            } else {
-              fromAddress = `Vaultly Reminders <${resendFromEnv}>`;
+            if (!clerkSecretKey || !resendApiKey) {
+              console.log(
+                `Skipping email dispatch: CLERK_SECRET_KEY or RESEND_API_KEY not configured. Created in-app notification for product ${product.id}.`,
+              );
+              return;
             }
-          }
 
-          const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://vaulty.site";
-          const productUrl = `${baseUrl}/dashboard/products/${product.id}`;
-          const settingsUrl = `${baseUrl}/dashboard/settings/notifications`;
+            const clerk = createClerkClient({ secretKey: clerkSecretKey });
+            const user = await clerk.users.getUser(product.userId);
+            const primaryEmail = user?.emailAddresses?.[0]?.emailAddress;
 
-          let headlineText = "";
-          if (days === 0) {
-            headlineText = `Your ${product.name} warranty has officially expired`;
-          } else if (days === 1) {
-            headlineText = `Your ${product.name} warranty expires tomorrow`;
-          } else {
-            headlineText = `Your ${product.name} warranty expires in ${days} days`;
-          }
+            if (!primaryEmail) {
+              console.log(`No primary email address found for user ${product.userId}`);
+              return;
+            }
 
-          const htmlContent = `
+            const resendFromEnv = process.env.RESEND_FROM_EMAIL;
+            let fromAddress = "Vaultly Reminders <onboarding@resend.dev>";
+            if (resendFromEnv) {
+              if (resendFromEnv.includes("<")) {
+                fromAddress = resendFromEnv;
+              } else {
+                fromAddress = `Vaultly Reminders <${resendFromEnv}>`;
+              }
+            }
+
+            const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://vaulty.site";
+            const productUrl = `${baseUrl}/dashboard/products/${product.id}`;
+            const settingsUrl = `${baseUrl}/dashboard/settings/notifications`;
+
+            let headlineText = "";
+            if (days === 0) {
+              headlineText = `Your ${product.name} warranty has officially expired`;
+            } else if (days === 1) {
+              headlineText = `Your ${product.name} warranty expires tomorrow`;
+            } else {
+              headlineText = `Your ${product.name} warranty expires in ${days} days`;
+            }
+
+            const htmlContent = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -235,20 +256,37 @@ export const checkWarrantyReminders = inngest.createFunction(
 </html>
 `;
 
-          const resend = new Resend(resendApiKey);
-          await resend.emails.send({
-            from: fromAddress,
-            to: [primaryEmail],
-            subject: notifTitle,
-            html: htmlContent,
-          });
-          sentCount++;
-        } catch (emailErr) {
-          console.error(`Failed to send email for product ${product.id}:`, emailErr);
-        }
-      });
-    }
+            const resend = new Resend(resendApiKey);
+            await resend.emails.send({
+              from: fromAddress,
+              to: [primaryEmail],
+              subject: notifTitle,
+              html: htmlContent,
+            });
+            sentCount++;
+          } catch (emailErr) {
+            console.error(`Failed to send email for product ${product.id}:`, emailErr);
+          }
+        });
+      }
 
-    return { processedProducts: products.length, sentCount };
+      // Sentry Cron Check-In: Success
+      Sentry.captureCheckIn({
+        monitorSlug: MONITOR_SLUG,
+        status: "ok",
+        checkInId,
+      });
+
+      return { processedProducts: products.length, sentCount };
+    } catch (err: any) {
+      // Sentry Cron Check-In: Error
+      Sentry.captureCheckIn({
+        monitorSlug: MONITOR_SLUG,
+        status: "error",
+        checkInId,
+      });
+      Sentry.captureException(err);
+      throw err;
+    }
   },
 );
