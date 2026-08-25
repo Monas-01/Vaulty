@@ -13,6 +13,25 @@ Sentry.init({
   // Enable logs to be sent to Sentry
   enableLogs: true,
 
+  // Ignore bot scan / stale deployment Server Action lookup errors
+  ignoreErrors: [
+    "Failed to find Server Action",
+    /^Failed to find Server Action/,
+  ],
+
+  beforeSend(event, hint) {
+    const error = hint?.originalException;
+    if (error && typeof error === "object" && "message" in error) {
+      if (
+        typeof error.message === "string" &&
+        error.message.includes("Failed to find Server Action")
+      ) {
+        return null;
+      }
+    }
+    return event;
+  },
+
   dataCollection: {
     // To disable sending user data and HTTP bodies, uncomment the lines below. For more info visit:
     // https://docs.sentry.io/platforms/javascript/guides/nextjs/configuration/options/#dataCollection

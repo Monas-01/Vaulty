@@ -1,5 +1,7 @@
+import { auth } from "@clerk/nextjs/server";
 import { IconReceipt, IconShieldCheck } from "@tabler/icons-react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
 import { getProducts } from "@/lib/actions/products";
@@ -18,6 +20,11 @@ interface WarrantiesPageProps {
 }
 
 export default async function WarrantiesPage({ searchParams }: WarrantiesPageProps) {
+  const { userId } = await auth();
+  if (!userId) {
+    redirect("/login");
+  }
+
   const { status } = await searchParams;
   const products = await getProducts();
 

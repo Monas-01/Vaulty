@@ -1,8 +1,16 @@
+import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
+
 import { getNotifications } from "@/lib/actions/notifications";
 import { MarkAllReadButton } from "@/components/notifications/mark-all-read-button";
 import { NotificationListFilter } from "@/components/notifications/notification-list-filter";
 
 export default async function NotificationsPage() {
+  const { userId } = await auth();
+  if (!userId) {
+    redirect("/login");
+  }
+
   const notifications = await getNotifications();
   const unreadCount = notifications.filter((n: { isRead: boolean }) => !n.isRead).length;
 

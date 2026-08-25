@@ -1,3 +1,4 @@
+import { auth } from "@clerk/nextjs/server";
 import {
   IconArrowLeft,
   IconBuildingStore,
@@ -8,7 +9,7 @@ import {
   IconShieldCheck,
 } from "@tabler/icons-react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { getProductById } from "@/lib/actions/products";
 import {
@@ -28,6 +29,11 @@ interface ProductDetailPageProps {
 export default async function ProductDetailPage({
   params,
 }: ProductDetailPageProps) {
+  const { userId } = await auth();
+  if (!userId) {
+    redirect("/login");
+  }
+
   const { id } = await params;
   const product = await getProductById(id);
 

@@ -1,4 +1,6 @@
+import { auth } from "@clerk/nextjs/server";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { Logo } from "@/components/brand/Logo";
 import { SidebarNav } from "@/components/dashboard/sidebar-nav";
@@ -8,6 +10,10 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const { userId } = await auth();
+  if (!userId) {
+    redirect("/login");
+  }
   return (
     <div className="flex min-h-screen bg-canvas-soft">
       {/* ── Desktop Sidebar ────────────────────────────────────────────── */}

@@ -1,5 +1,7 @@
+import { auth } from "@clerk/nextjs/server";
 import { IconPlus, IconReceipt, IconShieldCheck } from "@tabler/icons-react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
 import { getProducts } from "@/lib/actions/products";
@@ -19,6 +21,11 @@ interface ProductsPageProps {
 }
 
 export default async function ProductsPage({ searchParams }: ProductsPageProps) {
+  const { userId } = await auth();
+  if (!userId) {
+    redirect("/login");
+  }
+
   const { search, category } = await searchParams;
   const products = await getProducts(search, category);
 

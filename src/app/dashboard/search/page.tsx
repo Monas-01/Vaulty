@@ -1,5 +1,7 @@
+import { auth } from "@clerk/nextjs/server";
 import { IconPackage, IconSearch } from "@tabler/icons-react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { getProducts } from "@/lib/actions/products";
 import {
@@ -17,6 +19,11 @@ interface SearchPageProps {
 export default async function SearchResultsPage({
   searchParams,
 }: SearchPageProps) {
+  const { userId } = await auth();
+  if (!userId) {
+    redirect("/login");
+  }
+
   const { q } = await searchParams;
   const query = q || "";
   const products = await getProducts(query);

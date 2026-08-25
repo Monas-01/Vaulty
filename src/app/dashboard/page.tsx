@@ -4,14 +4,20 @@ import {
   IconShieldCheck,
   IconVault,
 } from "@tabler/icons-react";
-import { currentUser } from "@clerk/nextjs/server";
+import { auth, currentUser } from "@clerk/nextjs/server";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { getProducts } from "@/lib/actions/products";
 import { calculateWarranty, formatDate } from "@/lib/product-helpers";
 import { Button } from "@/components/ui/button";
 
 export default async function DashboardPage() {
+  const { userId } = await auth();
+  if (!userId) {
+    redirect("/login");
+  }
+
   const user = await currentUser();
   const products = await getProducts();
 

@@ -1,6 +1,7 @@
+import { auth } from "@clerk/nextjs/server";
 import { IconArrowLeft } from "@tabler/icons-react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { getProductById } from "@/lib/actions/products";
 import { ProductForm } from "@/components/products/product-form";
@@ -12,6 +13,11 @@ interface EditProductPageProps {
 }
 
 export default async function EditProductPage({ params }: EditProductPageProps) {
+  const { userId } = await auth();
+  if (!userId) {
+    redirect("/login");
+  }
+
   const { id } = await params;
   const product = await getProductById(id);
 
