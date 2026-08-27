@@ -1,41 +1,85 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# dependencies
-/node_modules
-/.pnp
+# -------------------------------------------------
+# Dependencies
+# -------------------------------------------------
+node_modules/
+.pnp/
 .pnp.js
 .yarn/install-state.gz
 
-# testing
-/coverage
 
-# next.js
-/.next/
-/out/
+# -------------------------------------------------
+# Testing
+# -------------------------------------------------
+coverage/
 
-# production
-/build
 
-# misc
-.DS_Store
-*.pem
+# -------------------------------------------------
+# Next.js
+# -------------------------------------------------
+.next/
+out/
+build/
+next-env.d.ts
 
-# debug
+
+# -------------------------------------------------
+# Environment variables & secrets
+# -------------------------------------------------
+.env
+.env.*
+!.env.example
+.env.sentry-build-plugin
+
+
+# -------------------------------------------------
+# Vercel
+# -------------------------------------------------
+.vercel/
+
+
+# -------------------------------------------------
+# TypeScript
+# -------------------------------------------------
+*.tsbuildinfo
+
+
+# -------------------------------------------------
+# Prisma
+# -------------------------------------------------
+src/generated/prisma/
+
+
+# -------------------------------------------------
+# Debug logs
+# -------------------------------------------------
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# local env files
-.env*.local
 
-# vercel
-.vercel
+# -------------------------------------------------
+# OS files
+# -------------------------------------------------
+.DS_Store
+Thumbs.db
 
-# typescript
-*.tsbuildinfo
-next-env.d.ts
 
-/src/generated/prisma
+# -------------------------------------------------
+# Certificates & sensitive files
+# -------------------------------------------------
+*.pem
+*.key
+*.crt
 
-# Sentry Config File
-.env.sentry-build-plugin
+
+# -------------------------------------------------
+# AI coding tools - local configuration
+# -------------------------------------------------
+.claude/
+.windsurf/
+.agents/
+
+CLAUDE.md
+AGENTS.md
