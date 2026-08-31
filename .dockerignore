@@ -11,7 +11,10 @@ out
 .git
 .gitignore
 
-
+# Environment / secrets
+.env
+.env.local
+.env.*.local
 
 # Logs
 npm-debug.log*
@@ -22,13 +25,5 @@ pnpm-debug.log*
 # OS files
 .DS_Store
 
-# Docker
-Dockerfile*
-docker-compose*
-.dockerignore
-
 # SSH / Keys
 *.pem
-
-# Documentation
-README.md

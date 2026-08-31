@@ -7,8 +7,12 @@ RUN npm ci --legacy-peer-deps
 # Stage 2: build
 FROM node:20-slim AS builder
 WORKDIR /app
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+
+ENV NODE_OPTIONS="--max-old-space-size=768"
+
 RUN npx prisma generate
 RUN npm run build
 
