@@ -28,7 +28,7 @@ ENV NODE_ENV=production
 ENV DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder"
 
 # Optional public key for client-side static compilation
-ARG NEXT_PUBLIC_CLERK_PUBdockerLISHABLE_KEY
+ARG NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 
 # Generate Prisma Client and build Next.js standalone bundle
