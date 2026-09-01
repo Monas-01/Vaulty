@@ -31,6 +31,9 @@ ENV DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholde
 ARG NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 
+ARG NEXT_PUBLIC_CLERK_PROXY_URL
+ENV NEXT_PUBLIC_CLERK_PROXY_URL=$NEXT_PUBLIC_CLERK_PROXY_URL
+
 # Generate Prisma Client and build Next.js standalone bundle
 RUN npx prisma generate
 RUN npm run build
