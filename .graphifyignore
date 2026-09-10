@@ -1,0 +1,13 @@
+node_modules/
+.next/
+.turbo/
+out/
+dist/
+build/
+.pnpm-store/
+coverage/
+*.map
+pnpm-lock.yaml
+yarn.lock
+package-lock.json
+graphify-out/

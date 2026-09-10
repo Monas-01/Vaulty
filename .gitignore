@@ -83,3 +83,7 @@ Thumbs.db
 
 CLAUDE.md
 AGENTS.md
+# Graphify - local-only files
+graphify-out/cost.json
+graphify-out/cache/
+graphify-out/.graphify_python
