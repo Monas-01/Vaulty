@@ -2,6 +2,20 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
+import { prisma } from "@/lib/prisma";
+
+// Rate limiting configuration & tiered hook
+export const DAILY_EXTRACTION_LIMIT = 20;
+export const RATE_LIMIT_WINDOW_HOURS = 24;
+
+/**
+ * Hook to retrieve extraction quota per user.
+ * Can be extended in the future for tiered subscriptions (e.g. Free: 20, Pro: 100).
+ */
+export async function getUserDailyExtractionLimit(userId: string): Promise<number> {
+  return DAILY_EXTRACTION_LIMIT;
+}
+
 // Single source of truth for Gemini model configuration
 const GEMINI_MODEL_NAME = "gemini-3.5-flash";
 
@@ -41,6 +55,50 @@ export async function POST(req: Request) {
         { status: 400 },
       );
     }
+
+    // Step 0: Check rate limit BEFORE calling Gemini API
+    const userLimit = await getUserDailyExtractionLimit(userId);
+    const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_HOURS * 60 * 60 * 1000);
+
+    const [recentAttemptsCount, oldestAttemptInWindow] = await Promise.all([
+      prisma.extractionAttempt.count({
+        where: {
+          userId,
+          createdAt: { gte: windowStart },
+        },
+      }),
+      prisma.extractionAttempt.findFirst({
+        where: {
+          userId,
+          createdAt: { gte: windowStart },
+        },
+        orderBy: { createdAt: "asc" },
+        select: { createdAt: true },
+      }),
+    ]);
+
+    if (recentAttemptsCount >= userLimit) {
+      const retryAt = oldestAttemptInWindow
+        ? new Date(oldestAttemptInWindow.createdAt.getTime() + RATE_LIMIT_WINDOW_HOURS * 60 * 60 * 1000).toISOString()
+        : new Date(Date.now() + RATE_LIMIT_WINDOW_HOURS * 60 * 60 * 1000).toISOString();
+
+      return NextResponse.json(
+        {
+          error: "rate_limited",
+          errorCode: "rate_limited",
+          message: `You've reached today's upload limit (${userLimit}/day). Try again tomorrow.`,
+          limit: userLimit,
+          currentCount: recentAttemptsCount,
+          retryAt,
+        },
+        { status: 429 },
+      );
+    }
+
+    // Record the attempt against the user's rate limit quota
+    await prisma.extractionAttempt.create({
+      data: { userId },
+    });
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
@@ -166,6 +224,18 @@ CRITICAL RULES:
       parsedPayload = {};
     }
 
+    if (!parsedPayload || Object.keys(parsedPayload).length === 0) {
+      console.warn("Gemini did not return valid JSON. Raw response:", responseText);
+      return NextResponse.json(
+        {
+          error: "Could not identify receipt structure from the uploaded image.",
+          errorCode: "not_a_receipt",
+          rawResponse: responseText,
+        },
+        { status: 422 },
+      );
+    }
+
     const sharedStore = parsedPayload?.store?.trim() || "";
     const sharedDate = parseFormattedDate(parsedPayload?.purchaseDate);
 
@@ -173,13 +243,20 @@ CRITICAL RULES:
       ? parsedPayload.products
       : (parsedPayload?.name ? [parsedPayload] : []);
 
+    if (rawProductsList.length === 0) {
+      console.warn("No products found in parsed Gemini output. Raw response:", responseText);
+      return NextResponse.json(
+        {
+          error: "No line items or products were detected on this document.",
+          errorCode: "no_items_found",
+          rawResponse: responseText,
+        },
+        { status: 422 },
+      );
+    }
+
     const extractedProducts: any[] = [];
     const fieldStatusList: any[] = [];
-
-    if (rawProductsList.length === 0) {
-      // Fallback single product if nothing array-like was returned
-      rawProductsList.push({});
-    }
 
     for (const rawItem of rawProductsList) {
       const parsedPrice = parsePriceNumber(rawItem?.purchasePrice);
@@ -265,7 +342,29 @@ CRITICAL RULES:
     console.error("==================================================");
 
     const errorMessage = error?.message || String(error);
+    const status = error?.status || 500;
+
+    // 1. Authentication failure
+    if (
+      status === 401 ||
+      errorMessage.includes("401") ||
+      errorMessage.includes("ACCESS_TOKEN_TYPE_UNSUPPORTED") ||
+      errorMessage.includes("API_KEY_INVALID") ||
+      errorMessage.includes("invalid authentication credentials")
+    ) {
+      return NextResponse.json(
+        {
+          error: "Gemini API authentication failed. Please verify your GEMINI_API_KEY.",
+          errorCode: "auth_error",
+          details: errorMessage,
+        },
+        { status: 401 },
+      );
+    }
+
+    // 2. Rate limit / Quota exceeded
     const isRateLimit =
+      status === 429 ||
       errorMessage.includes("429") ||
       errorMessage.includes("RESOURCE_EXHAUSTED") ||
       errorMessage.includes("Quota") ||
@@ -274,19 +373,57 @@ CRITICAL RULES:
     if (isRateLimit) {
       return NextResponse.json(
         {
-          error:
-            "Gemini API rate limit reached. Please wait 1 minute and try again, or enter details manually.",
+          error: "Gemini API rate limit reached. Please wait 1 minute and try again.",
+          errorCode: "rate_limit",
           isRateLimit: true,
+          details: errorMessage,
         },
         { status: 429 },
       );
     }
 
+    // 3. Model not found or unsupported
+    if (
+      status === 404 ||
+      errorMessage.includes("404") ||
+      errorMessage.includes("models/") ||
+      errorMessage.includes("not found")
+    ) {
+      return NextResponse.json(
+        {
+          error: `Gemini model (${GEMINI_MODEL_NAME}) not found or unsupported.`,
+          errorCode: "model_not_found",
+          details: errorMessage,
+        },
+        { status: 500 },
+      );
+    }
+
+    // 4. Content Safety Filters
+    if (
+      errorMessage.includes("SAFETY") ||
+      errorMessage.includes("blocked") ||
+      errorMessage.includes("HARM_CATEGORY")
+    ) {
+      return NextResponse.json(
+        {
+          error: "The image was blocked by AI content safety guidelines.",
+          errorCode: "content_blocked",
+          details: errorMessage,
+        },
+        { status: 422 },
+      );
+    }
+
+    // 5. Default 422 with exact error details surfaced
     return NextResponse.json(
       {
-        error:
-          "Could not read receipt details clearly. The photo may be blurry or non-receipt.",
+        error: errorMessage.includes("Could not")
+          ? errorMessage
+          : `Extraction error: ${errorMessage}`,
+        errorCode: "extraction_failed",
         isUnclear: true,
+        details: errorMessage,
       },
       { status: 422 },
     );

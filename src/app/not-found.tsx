@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 
 export default function NotFound() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-canvas p-xl text-center">
-      <div className="card-content max-w-md w-full border border-border flex flex-col items-center justify-center py-3xl text-center shadow-lg">
+    <div className="flex min-h-screen w-full flex-col items-center justify-center bg-canvas p-xl text-center">
+      <div className="card-content w-full max-w-[480px] mx-auto border border-border flex flex-col items-center justify-center py-3xl text-center shadow-lg">
         <div className="flex size-20 items-center justify-center rounded-full bg-primary-pale text-ink">
           <IconQuestionMark size={36} stroke={1.5} />
         </div>

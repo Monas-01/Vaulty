@@ -56,4 +56,12 @@ model UserPreferences {
   updatedAt    DateTime @updatedAt
 }
 
+model ExtractionAttempt {
+  id        String   @id @default(cuid())
+  userId    String
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
 

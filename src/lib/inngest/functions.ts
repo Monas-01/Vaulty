@@ -290,3 +290,26 @@ export const checkWarrantyReminders = inngest.createFunction(
     }
   },
 );
+
+export const keepDatabaseAlive = inngest.createFunction(
+  {
+    id: "keep-database-alive",
+    triggers: [{ cron: "0 0 */3 * *" }],
+  },
+  async ({ step }: { step: any }) => {
+    try {
+      const count = await step.run("count-products", async () => {
+        return await prisma.product.count();
+      });
+
+      console.log(
+        `[keepDatabaseAlive] Database keep-alive query successful (Product count: ${count}) at ${new Date().toISOString()}`,
+      );
+
+      return { success: true, count, timestamp: new Date().toISOString() };
+    } catch (error) {
+      console.error("[keepDatabaseAlive] Database keep-alive query failed:", error);
+      throw error;
+    }
+  },
+);

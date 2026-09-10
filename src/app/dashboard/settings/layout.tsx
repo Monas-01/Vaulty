@@ -47,6 +47,7 @@ export default function SettingsLayout({
         {SETTINGS_TABS.map((tab) => {
           const isActive =
             pathname === tab.href ||
+            pathname.startsWith(`${tab.href}/`) ||
             (pathname === "/dashboard/settings" && tab.href === "/dashboard/settings/profile");
 
           return (

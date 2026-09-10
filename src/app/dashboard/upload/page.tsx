@@ -104,12 +104,38 @@ export default function DashboardUploadPage() {
         }),
       });
 
-      const extractData = await extractRes.json();
+      const extractData = await extractRes.json().catch(() => ({}));
 
       if (!extractRes.ok || !extractData.success) {
-        throw new Error(
-          extractData.error || "Could not extract details from receipt",
-        );
+        // Distinct handling for 429 Rate Limit
+        if (
+          extractRes.status === 429 ||
+          extractData.error === "rate_limited" ||
+          extractData.errorCode === "rate_limited"
+        ) {
+          throw new Error(
+            extractData.message ||
+              "You've reached today's upload limit (20/day). Try again tomorrow.",
+          );
+        }
+
+        let userMessage = extractData.error;
+        if (!userMessage) {
+          if (extractData.errorCode === "auth_error") {
+            userMessage = "Gemini API authentication failed. Please verify your GEMINI_API_KEY configuration.";
+          } else if (extractData.errorCode === "rate_limit") {
+            userMessage = "AI rate limit reached. Please wait a moment before trying again.";
+          } else if (extractData.errorCode === "no_items_found") {
+            userMessage = "No purchase items or products were detected on this receipt.";
+          } else if (extractData.errorCode === "not_a_receipt") {
+            userMessage = "The uploaded document could not be recognized as a valid receipt or invoice.";
+          } else if (extractData.errorCode === "content_blocked") {
+            userMessage = "The uploaded image was flagged by AI content safety filters.";
+          } else {
+            userMessage = "Could not extract details from receipt.";
+          }
+        }
+        throw new Error(userMessage);
       }
 
       setProgress(100);
