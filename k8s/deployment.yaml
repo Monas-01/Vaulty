@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vaulty-web
+  labels:
+    app: vaulty-web
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: vaulty-web
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      # Zero-downtime, but it means two pods coexist briefly. Sized against the
+      # 1400MB cgroup: 662 (control plane) + 2x~250 real usage leaves ~240MB.
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: vaulty-web
+    spec:
+      containers:
+        - name: web
+          image: IMAGE_PLACEHOLDER
+          # The image is side-loaded via `minikube image load`, never pushed to
+          # a registry. Any other policy makes the kubelet attempt a pull and
+          # fail with ErrImagePull.
+          imagePullPolicy: Never
+          ports:
+            - name: http
+              containerPort: 3000
+          envFrom:
+            - secretRef:
+                name: vaulty-secrets
+          resources:
+            requests:
+              memory: 256Mi
+              cpu: 150m
+            limits:
+              # Caps a runaway pod before it can reach the cgroup ceiling and
+              # get etcd OOM-killed instead. Deliberately no CPU limit, which
+              # would only add throttling on a 2-vCPU box.
+              memory: 512Mi
+          # Next cold-starts slowly here; the startup probe absorbs that so the
+          # liveness probe can stay aggressive afterwards.
+          startupProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            periodSeconds: 5
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop: ["ALL"]

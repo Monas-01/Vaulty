@@ -1,0 +1,31 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: vaulty-migrate
+spec:
+  backoffLimit: 2
+  # Keep finished jobs briefly so a failed deploy can still be inspected.
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels:
+        app: vaulty-migrate
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: IMAGE_PLACEHOLDER
+          imagePullPolicy: Never
+          # /migrate carries its own node_modules and prisma.config.ts, kept
+          # separate from the standalone bundle in /app.
+          workingDir: /migrate
+          command: ["npx", "prisma", "migrate", "deploy"]
+          envFrom:
+            - secretRef:
+                name: vaulty-secrets
+          resources:
+            requests:
+              memory: 192Mi
+              cpu: 100m
+            limits:
+              memory: 384Mi
