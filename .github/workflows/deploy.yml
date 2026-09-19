@@ -2,7 +2,9 @@ name: Build and Deploy
 
 on:
   push:
-    branches: [main]
+    # Capital P: GitHub branch filters are case-sensitive and the branch is
+    # "Production". A lowercase "production" here would silently never match.
+    branches: [Production]
   workflow_dispatch:
 
 # Never let two deploys race onto the same box.
