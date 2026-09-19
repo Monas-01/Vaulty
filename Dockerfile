@@ -27,6 +27,11 @@ ENV NODE_ENV=production
 # Real secrets are passed at runtime
 ENV DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder"
 
+# prisma.config.ts reads DIRECT_URL first. Prisma's env() helper throws on a
+# missing variable rather than returning undefined, so the `|| DATABASE_URL`
+# fallback in that file never runs -- both must exist at build time.
+ENV DIRECT_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder"
+
 # Clerk public key is required during Next.js build
 ARG NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
