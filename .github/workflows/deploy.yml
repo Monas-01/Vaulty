@@ -1,0 +1,161 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Never let two deploys race onto the same box.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  IMAGE_NAME: vaulty
+  NAMESPACE: vaulty
+  DEPLOYMENT: vaulty-web
+
+jobs:
+  deploy:
+    name: Build image and deploy to minikube
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Builds on the runner, not the t3.small. Writes a docker-format tarball
+      # straight to disk instead of pushing to a registry.
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          outputs: type=docker,dest=/tmp/${{ env.IMAGE_NAME }}.tar
+          tags: ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+            NEXT_PUBLIC_CLERK_PROXY_URL=${{ secrets.NEXT_PUBLIC_CLERK_PROXY_URL }}
+            NEXT_PUBLIC_APP_URL=${{ secrets.NEXT_PUBLIC_APP_URL }}
+
+      - name: Compress image
+        run: |
+          gzip -1 /tmp/${{ env.IMAGE_NAME }}.tar
+          ls -lh /tmp/${{ env.IMAGE_NAME }}.tar.gz
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+          cat > ~/.ssh/config <<EOF
+          Host ec2
+            HostName ${{ secrets.EC2_HOST }}
+            User ${{ secrets.EC2_USER }}
+            IdentityFile ~/.ssh/deploy_key
+            ServerAliveInterval 30
+            ServerAliveCountMax 10
+          EOF
+          chmod 600 ~/.ssh/config
+
+      # Runtime secrets are never committed and never appear in a command line
+      # on the box -- they travel as a 0600 file and are shredded after apply.
+      - name: Sync runtime secrets into the cluster
+        run: |
+          umask 077
+          cat > /tmp/app.env <<EOF
+          DATABASE_URL=${{ secrets.DATABASE_URL }}
+          DIRECT_URL=${{ secrets.DIRECT_URL }}
+          CLERK_SECRET_KEY=${{ secrets.CLERK_SECRET_KEY }}
+          AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION=${{ secrets.AWS_REGION }}
+          AWS_S3_BUCKET_NAME=${{ secrets.AWS_S3_BUCKET_NAME }}
+          GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
+          RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}
+          RESEND_FROM_EMAIL=${{ secrets.RESEND_FROM_EMAIL }}
+          INNGEST_EVENT_KEY=${{ secrets.INNGEST_EVENT_KEY }}
+          INNGEST_SIGNING_KEY=${{ secrets.INNGEST_SIGNING_KEY }}
+          EOF
+          scp /tmp/app.env ec2:/tmp/app.env
+          ssh ec2 'bash -euo pipefail -s' <<'REMOTE'
+            kubectl create namespace vaulty --dry-run=client -o yaml \
+              | kubectl apply -f -
+            kubectl -n vaulty create secret generic vaulty-secrets \
+              --from-env-file=/tmp/app.env \
+              --dry-run=client -o yaml | kubectl apply -f -
+            shred -u /tmp/app.env
+          REMOTE
+          shred -u /tmp/app.env
+
+      - name: Ship image to EC2
+        run: scp -C /tmp/${{ env.IMAGE_NAME }}.tar.gz ec2:/tmp/
+
+      # minikube keeps its own container runtime, so the image has to be loaded
+      # into it explicitly -- the host docker daemon is not what serves pods.
+      - name: Load image into minikube
+        run: |
+          ssh ec2 'bash -euo pipefail -s' <<'REMOTE'
+            gunzip -f /tmp/vaulty.tar.gz
+            minikube image load /tmp/vaulty.tar
+            rm -f /tmp/vaulty.tar
+          REMOTE
+
+      # Manifests carry IMAGE_PLACEHOLDER; the commit SHA is stamped in here so
+      # every deploy is an immutable tag. Reusing :latest with a locally loaded
+      # image gives you a silent no-op rollout.
+      - name: Stage manifests
+        run: |
+          mkdir -p /tmp/staged
+          for f in k8s/*.yaml k8s/jobs/*.yaml; do
+            mkdir -p "/tmp/staged/$(dirname "${f#k8s/}")"
+            sed "s|IMAGE_PLACEHOLDER|${{ env.IMAGE_NAME }}:${{ github.sha }}|g" \
+              "$f" > "/tmp/staged/${f#k8s/}"
+          done
+          scp -r /tmp/staged ec2:/tmp/k8s-${{ github.sha }}
+
+      # Migrations run to completion before any new pod serves traffic.
+      - name: Run database migrations
+        run: |
+          ssh ec2 'bash -euo pipefail -s' <<REMOTE
+            cd /tmp/k8s-${{ github.sha }}
+            kubectl -n vaulty delete job vaulty-migrate --ignore-not-found --wait=true
+            kubectl -n vaulty apply -f jobs/migrate.yaml
+            kubectl -n vaulty wait --for=condition=complete job/vaulty-migrate --timeout=300s \
+              || { kubectl -n vaulty logs job/vaulty-migrate --tail=100; exit 1; }
+            kubectl -n vaulty logs job/vaulty-migrate --tail=30
+          REMOTE
+
+      - name: Apply manifests and roll out
+        run: |
+          ssh ec2 'bash -euo pipefail -s' <<REMOTE
+            kubectl -n vaulty apply -f /tmp/k8s-${{ github.sha }}/
+            kubectl -n vaulty rollout status deployment/vaulty-web --timeout=300s
+            rm -rf /tmp/k8s-${{ github.sha }}
+          REMOTE
+
+      - name: Roll back on failure
+        if: failure()
+        run: |
+          ssh ec2 'bash -euo pipefail -s' <<'REMOTE' || true
+            kubectl -n vaulty rollout undo deployment/vaulty-web
+            kubectl -n vaulty rollout status deployment/vaulty-web --timeout=180s
+          REMOTE
+
+      # 19GB disk fills fast when every deploy leaves an image behind.
+      - name: Clean up
+        if: always()
+        run: |
+          ssh ec2 'bash -euo pipefail -s' <<REMOTE || true
+            rm -rf /tmp/vaulty.tar /tmp/vaulty.tar.gz /tmp/k8s-${{ github.sha }} /tmp/app.env
+            minikube image ls --format table 2>/dev/null \
+              | grep -oE 'vaulty[[:space:]]+[a-f0-9]{40}' | awk '{print \$2}' \
+              | grep -v '${{ github.sha }}' | tail -n +3 \
+              | xargs -r -I{} minikube image rm vaulty:{}
+          REMOTE
