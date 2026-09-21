@@ -20,12 +20,54 @@ const ibmPlexMono = IBM_Plex_Mono({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: "Vaultly — Never lose a receipt again",
-  description:
-    "Store receipts, invoices, and warranty documents. AI extracts the details, tracks your warranty, and reminds you before it expires.",
-};
+const siteUrl = "https://vaulty.site";
 
+export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "Vaultly | Never Lose a Receipt or Warranty Again",
+    template: "%s | Vaultly",
+  },
+  description:
+    "Store receipts, invoices, and warranty documents in one secure vault. AI extracts the details, tracks warranty expiry, and reminds you before it runs out.",
+  keywords: [
+    "receipt tracker",
+    "warranty tracker",
+    "digital receipt storage",
+    "invoice organizer",
+    "warranty expiration reminder",
+  ],
+  openGraph: {
+    title: "Vaultly: Never Lose a Receipt Again",
+    description:
+      "Store receipts, invoices, and warranty documents. AI extracts the details, tracks your warranty, and reminds you before it expires.",
+    url: siteUrl,
+    siteName: "Vaultly",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Vaultly receipt and warranty tracker",
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Vaultly: Never Lose a Receipt Again",
+    description:
+      "Store receipts, invoices, and warranty documents. AI extracts the details, tracks your warranty, and reminds you before it expires.",
+    images: ["/og-image.png"],
+  },
+  robots: { index: true, follow: true },
+  icons: {
+    icon: ["/favicon-32x32.png", "/favicon-16x16.png"],
+    apple: "/apple-touch-icon.png",
+  },
+  manifest: "/site.webmanifest",
+};
 
 export default function RootLayout({
   children,
@@ -77,3 +119,4 @@ export default function RootLayout({
     </html>
   );
 }
+

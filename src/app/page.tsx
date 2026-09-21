@@ -1,7 +1,13 @@
+import type { Metadata } from "next";
+
 import { LandingFeatures } from "@/components/landing/landing-features";
 import { LandingFooterCta } from "@/components/landing/landing-footer-cta";
 import { LandingHero } from "@/components/landing/landing-hero";
 import { LandingNav } from "@/components/landing/landing-nav";
+
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
 
 export default function Home() {
   return (
@@ -15,3 +21,4 @@ export default function Home() {
     </div>
   );
 }
+
