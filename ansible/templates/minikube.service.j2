@@ -1,0 +1,26 @@
+[Unit]
+Description=minikube Kubernetes cluster
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User={{ ansible_user }}
+Group={{ ansible_user }}
+Environment=HOME=/home/{{ ansible_user }}
+ExecStart=/usr/local/bin/minikube start \
+  --driver=docker \
+  --memory={{ minikube_cgroup_mb }}mb \
+  --cpus=2 \
+  --disk-size=20000mb \
+  --extra-config=kubelet.system-reserved=memory={{ kubelet_system_reserved }} \
+  --extra-config=kubelet.kube-reserved=memory={{ kubelet_kube_reserved }} \
+  --extra-config=kubelet.eviction-hard=memory.available<{{ kubelet_eviction_hard }} \
+  --extra-config=kubelet.fail-swap-on=false
+ExecStop=/usr/local/bin/minikube stop
+TimeoutStartSec=900
+
+[Install]
+WantedBy=multi-user.target

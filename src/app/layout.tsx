@@ -24,6 +24,9 @@ const siteUrl = "https://vaulty.site";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
+  alternates: {
+    canonical: "/",
+  },
   title: {
     default: "Vaultly | Never Lose a Receipt or Warranty Again",
     template: "%s | Vaultly",

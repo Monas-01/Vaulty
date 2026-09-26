@@ -91,3 +91,8 @@ graphify-out/.graphify_python
 # Graphify generated files
 graphify-out/
 .graphify*
+
+# -------------------------------------------------
+# Ansible - real inventory (contains live IP/key path)
+# -------------------------------------------------
+ansible/inventory.yml
