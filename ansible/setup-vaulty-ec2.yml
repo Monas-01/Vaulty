@@ -1,0 +1,164 @@
+---
+# setup-vaulty-ec2.yml
+# Codifies the "Server configuration that isn't in this repository" section
+# of deployment.md. Safe to re-run (idempotent) — dry-run first with:
+#   ansible-playbook -i inventory.yml setup-vaulty-ec2.yml --check --diff
+
+- name: Configure Vaultly EC2 host
+  hosts: vaulty_ec2
+  become: true
+  vars:
+    swap_size_gb: 2
+    minikube_cgroup_mb: 1400
+    kubelet_system_reserved: "600Mi"
+    kubelet_kube_reserved: "100Mi"
+    kubelet_eviction_hard: "150Mi"
+
+  tasks:
+
+    # --- Swap: 2GB swapfile, fstab entry, vm.swappiness=10 ---
+    - name: Check if swapfile already exists
+      stat:
+        path: /swapfile
+      register: swapfile_stat
+
+    - name: Create swapfile
+      command: fallocate -l {{ swap_size_gb }}G /swapfile
+      when: not swapfile_stat.stat.exists
+
+    - name: Set swapfile permissions
+      file:
+        path: /swapfile
+        mode: '0600'
+      when: not swapfile_stat.stat.exists
+
+    - name: Format swapfile
+      command: mkswap /swapfile
+      when: not swapfile_stat.stat.exists
+
+    - name: Enable swapfile
+      command: swapon /swapfile
+      when: not swapfile_stat.stat.exists
+
+    - name: Persist swapfile in /etc/fstab
+      lineinfile:
+        path: /etc/fstab
+        line: "/swapfile none swap sw 0 0"
+        state: present
+
+    - name: Set vm.swappiness=10 persistently
+      copy:
+        dest: /etc/sysctl.d/99-swappiness.conf
+        content: "vm.swappiness=10\n"
+        mode: '0644'
+      notify: Reload sysctl
+
+    # --- kubectl binary + shell aliases (k, kn) ---
+    - name: Check if kubectl is installed
+      command: which kubectl
+      register: kubectl_check
+      changed_when: false
+      failed_when: false
+
+    - name: Download kubectl
+      get_url:
+        url: "https://dl.k8s.io/release/stable.txt"
+        dest: /tmp/kubectl_version.txt
+      when: kubectl_check.rc != 0
+
+    - name: Install kubectl
+      shell: |
+        curl -LO "https://dl.k8s.io/release/$(cat /tmp/kubectl_version.txt)/bin/linux/amd64/kubectl"
+        install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+      args:
+        chdir: /tmp
+      when: kubectl_check.rc != 0
+
+    - name: Add kubectl/kn aliases to .bashrc
+      blockinfile:
+        path: "/home/{{ ansible_user }}/.bashrc"
+        marker: "# {mark} ANSIBLE MANAGED - kubectl aliases"
+        block: |
+          alias k=kubectl
+          alias kn="kubectl -n vaulty"
+
+    # --- nginx site config ---
+    - name: Ensure nginx is installed
+      apt:
+        name: nginx
+        state: present
+        update_cache: true
+
+    - name: Deploy nginx site config for vaulty
+      template:
+        src: templates/nginx-vaulty.conf.j2
+        dest: /etc/nginx/sites-available/vaulty
+        mode: '0644'
+      notify: Reload nginx
+
+    - name: Enable vaulty nginx site
+      file:
+        src: /etc/nginx/sites-available/vaulty
+        dest: /etc/nginx/sites-enabled/vaulty
+        state: link
+      notify: Reload nginx
+
+    # --- minikube.service (restarts cluster on reboot) ---
+    - name: Deploy minikube systemd service
+      template:
+        src: templates/minikube.service.j2
+        dest: /etc/systemd/system/minikube.service
+        mode: '0644'
+      notify: Reload systemd
+
+    - name: Enable minikube service on boot
+      systemd:
+        name: minikube
+        enabled: true
+        daemon_reload: true
+
+    - name: Check if minikube cluster is already running
+      command: /usr/local/bin/minikube status
+      register: minikube_status
+      changed_when: false
+      failed_when: false
+      become: false
+      become_user: "{{ ansible_user }}"
+
+    - name: Start minikube service now if not already running
+      systemd:
+        name: minikube
+        state: started
+      when: "'Running' not in minikube_status.stdout"
+
+    # --- CI deploy keypair (~/.ssh/github_deploy) ---
+    # NOTE: generating a keypair via Ansible only makes sense if it doesn't
+    # already exist — if it already exists on the live box, this just
+    # confirms presence. The PRIVATE key should never be copied back into
+    # the repo; only the public key gets registered wherever it's needed
+    # (this task just guarantees the pair exists, it doesn't manage rotation).
+    - name: Check if CI deploy keypair exists
+      stat:
+        path: "/home/{{ ansible_user }}/.ssh/github_deploy"
+      register: ci_key_stat
+
+    - name: Generate CI deploy keypair (ed25519) if missing
+      openssh_keypair:
+        path: "/home/{{ ansible_user }}/.ssh/github_deploy"
+        type: ed25519
+        owner: "{{ ansible_user }}"
+        mode: '0600'
+      when: not ci_key_stat.stat.exists
+
+  handlers:
+    - name: Reload sysctl
+      command: sysctl --system
+
+    - name: Reload nginx
+      systemd:
+        name: nginx
+        state: reloaded
+
+    - name: Reload systemd
+      systemd:
+        daemon_reload: true
