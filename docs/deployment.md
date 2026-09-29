@@ -2,8 +2,9 @@
 
 Vaultly runs on a single EC2 instance in a one-node minikube cluster, behind
 nginx. GitHub Actions builds the image and ships it to that box on every push
-to `Production`. Server-level configuration (swap, nginx, minikube, kubectl)
-is codified in Ansible, not applied by hand.
+to `Production`. The instance itself is provisioned through Terraform;
+server-level configuration (swap, nginx, minikube, kubectl) is codified in
+Ansible on top of that. Neither is applied by hand anymore.
 
 This document covers what the pipeline does, why it's shaped the way it is, and
 what still needs doing.
@@ -151,6 +152,39 @@ generated on the instance, separate from any personal key.
 `NEXT_PUBLIC_CLERK_PROXY_URL` is the one left unset. Clerk authenticates through
 the `clerk.vaulty.site` CNAME instead, and setting both would break sign-in.
 
+## Infrastructure
+
+The EC2 instance, its security group, and its Elastic IP are managed by
+Terraform, in `terraform/`. All three already existed — created by hand
+through the AWS Console before Terraform was introduced — so they were
+brought under management with `terraform import` rather than recreated.
+
+`terraform plan` was run immediately after each import and, deliberately,
+was not trusted at face value: the first plan showed the security group
+needing `-/+ destroy and then create replacement`, because its `description`
+field (immutable on AWS) didn't match what was written in `main.tf`. Applying
+that plan would have deleted and rebuilt the running security group under a
+live instance. The description was corrected to match the real resource
+instead, and `terraform plan` was re-run until it reported only safe
+in-place updates — then, and only then, `terraform apply` was run.
+
+The current state, verified: `terraform plan` reports "No changes. Your
+infrastructure matches the configuration." Any future change to instance
+type, security group rules, or the Elastic IP should go through
+`terraform plan` / `apply`, not the AWS Console — the Console and Terraform
+will silently drift apart otherwise, and the next `plan` won't distinguish
+an intentional manual change from an accidental one.
+
+`terraform.tfstate` is gitignored; it isn't stored remotely, so it exists
+only on whichever machine last ran `apply`. That's a real single point of
+failure for a team, but is an accepted gap for a single-operator project —
+noted here rather than solved, since a remote backend (S3 + DynamoDB
+locking) is the standard fix if this ever needs to be shared or automated
+in CI.
+
+Terraform provisions the instance; it does not configure it. Ansible
+picks up from there.
+
 ## Server configuration
 
 This used to be undocumented live state on the instance — the gap this
@@ -188,9 +222,9 @@ ansible-playbook -i inventory.yml setup-vaulty-ec2.yml --diff
 ```
 
 The playbook does not provision the EC2 instance itself, install Docker, or
-run Certbot for the first time — it assumes a host with Docker already
-present and a certificate already issued, and manages everything layered on
-top of that.
+run Certbot for the first time — it assumes a host that Terraform has
+already created, with Docker present and a certificate already issued, and
+manages everything layered on top of that.
 
 ## Operating it
 
@@ -215,6 +249,13 @@ docker stats minikube --no-stream
 kubectl describe node minikube | grep -A5 Allocatable
 ```
 
+To check infrastructure drift:
+
+```bash
+cd terraform
+terraform plan
+```
+
 ## Known gaps
 
 The Supabase project is in `ap-south-1` while the instance is in `us-east-1`,
@@ -231,3 +272,7 @@ placeholder go away.
 
 There is one replica and no HorizontalPodAutoscaler. Vertical headroom is
 about 600 MB. Past that, the instance needs to grow.
+
+Terraform's state file is local-only, not stored in a remote backend. Fine
+for one operator; would need S3 + DynamoDB locking before this could be
+safely run from CI or shared with anyone else.
