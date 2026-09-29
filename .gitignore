@@ -96,3 +96,11 @@ graphify-out/
 # Ansible - real inventory (contains live IP/key path)
 # -------------------------------------------------
 ansible/inventory.yml
+
+# -------------------------------------------------
+# Terraform
+# -------------------------------------------------
+terraform/.terraform/
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+terraform/.terraform.lock.hcl
