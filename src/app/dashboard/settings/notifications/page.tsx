@@ -65,7 +65,7 @@ export default function NotificationSettingsPage() {
       <div className="w-full">
         <h2 className="text-body-md-strong text-ink w-full">Email Reminder Thresholds</h2>
         <p className="mt-xxs text-body-sm text-body w-full">
-          Configure when Vaultly sends automated email alerts before your product warranties expire.
+          Configure when Vaulty sends automated email alerts before your product warranties expire.
         </p>
       </div>
 

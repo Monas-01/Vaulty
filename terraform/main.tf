@@ -56,7 +56,7 @@ resource "aws_instance" "vaulty" {
   }
 
   tags = {
-    Name = "vaultly-server"
+    Name = "vaulty-server"
   }
 }
 

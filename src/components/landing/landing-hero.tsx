@@ -17,7 +17,7 @@ export function LandingHero() {
             <TypewriterHeadline className="text-[clamp(44px,8vw,96px)] leading-[0.875] font-black text-ink" />
 
             <p className="mt-xl max-w-[480px] text-body-lg text-body">
-              Upload a receipt photo and Vaultly reads the details, tracks your
+              Upload a receipt photo and Vaulty reads the details, tracks your
               warranty, and reminds you before it expires — so you always have
               proof when you need it.
             </p>

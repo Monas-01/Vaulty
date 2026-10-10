@@ -1,8 +1,8 @@
 # Architecture
 
-Vaultly is a receipt and warranty tracker: a user uploads a photo of a
+Vaulty is a receipt and warranty tracker: a user uploads a photo of a
 receipt, AI reads it, the user reviews and confirms what was extracted, and
-Vaultly tracks the resulting product's warranty and reminds the user before
+Vaulty tracks the resulting product's warranty and reminds the user before
 it expires.
 
 This document is the bird's-eye view — what the system is made of and how

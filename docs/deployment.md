@@ -1,6 +1,6 @@
 # Deployment
 
-Vaultly runs on a single EC2 instance in a one-node minikube cluster, behind
+Vaulty runs on a single EC2 instance in a one-node minikube cluster, behind
 nginx. GitHub Actions builds the image and ships it to that box on every push
 to `Production`. The instance itself is provisioned through Terraform;
 server-level configuration (swap, nginx, minikube, kubectl) is codified in

@@ -15,7 +15,7 @@ const STEPS = [
     step: "01",
     title: "Upload",
     description:
-      "Snap a photo on your phone or drag and drop any receipt, invoice, or warranty document into Vaultly.",
+      "Snap a photo on your phone or drag and drop any receipt, invoice, or warranty document into Vaulty.",
     icon: IconReceipt,
     iconBg: "bg-accent-cyan-pale text-accent-cyan",
   },
@@ -31,7 +31,7 @@ const STEPS = [
     step: "03",
     title: "We track your warranty",
     description:
-      "Vaultly categorizes your items and maintains an active countdown for every single warranty period.",
+      "Vaulty categorizes your items and maintains an active countdown for every single warranty period.",
     icon: IconShieldCheck,
     iconBg: "bg-accent-emerald-pale text-accent-emerald",
   },
@@ -61,7 +61,7 @@ export default function HowItWorksPage() {
               Simple, automatic receipt &amp; warranty tracking.
             </h1>
             <p className="mt-xl max-w-[560px] text-body-lg text-body">
-              Upload a receipt photo and Vaultly reads the details, tracks your
+              Upload a receipt photo and Vaulty reads the details, tracks your
               warranty, and reminds you before it expires.
             </p>
           </div>

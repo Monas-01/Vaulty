@@ -143,7 +143,7 @@ export default function DashboardUploadPage() {
 
       // Store in sessionStorage for review page
       sessionStorage.setItem(
-        "vaultly_extracted_receipt",
+        "vaulty_extracted_receipt",
         JSON.stringify({
           extractedProducts: extractData.extractedProducts || [extractData.extractedData],
           fieldStatusList: extractData.fieldStatusList || [extractData.fieldStatus || {}],
@@ -199,7 +199,7 @@ export default function DashboardUploadPage() {
         </Link>
         <h1 className="text-display-sm text-ink">Upload Receipt</h1>
         <p className="mt-xs text-body-md text-body">
-          Upload a receipt or invoice. Vaultly AI reads the details, detects warranty duration, and prepares your product entry.
+          Upload a receipt or invoice. Vaulty AI reads the details, detects warranty duration, and prepares your product entry.
         </p>
       </div>
 
@@ -245,7 +245,7 @@ export default function DashboardUploadPage() {
               <h2 className="text-body-md-strong text-ink text-lg">
                 {uploadStatus === "uploading"
                   ? "Uploading to Vault S3…"
-                  : "Vaultly AI Reading Receipt…"}
+                  : "Vaulty AI Reading Receipt…"}
               </h2>
               <p className="text-body-sm text-mute">
                 {file?.name} ({(file?.size ? file.size / (1024 * 1024) : 0).toFixed(2)} MB)

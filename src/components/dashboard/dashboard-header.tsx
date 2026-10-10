@@ -81,7 +81,7 @@ export function DashboardHeader() {
                 className="flex items-center gap-sm"
               >
                 <Logo size={30} />
-                <span className="text-body-md-strong text-ink">Vaultly</span>
+                <span className="text-body-md-strong text-ink">Vaulty</span>
               </Link>
               <button
                 type="button"

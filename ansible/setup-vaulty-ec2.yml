@@ -4,7 +4,7 @@
 # of deployment.md. Safe to re-run (idempotent) — dry-run first with:
 #   ansible-playbook -i inventory.yml setup-vaulty-ec2.yml --check --diff
 
-- name: Configure Vaultly EC2 host
+- name: Configure Vaulty EC2 host
   hosts: vaulty_ec2
   become: true
   vars:

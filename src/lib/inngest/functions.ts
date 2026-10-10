@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { calculateWarranty, formatDate } from "@/lib/product-helpers";
 import { inngest } from "./client";
 
-const MONITOR_SLUG = "vaultly-warranty-reminders";
+const MONITOR_SLUG = "vaulty-warranty-reminders";
 
 export const checkWarrantyReminders = inngest.createFunction(
   {
@@ -135,12 +135,12 @@ export const checkWarrantyReminders = inngest.createFunction(
             }
 
             const resendFromEnv = process.env.RESEND_FROM_EMAIL;
-            let fromAddress = "Vaultly Reminders <onboarding@resend.dev>";
+            let fromAddress = "Vaulty Reminders <onboarding@resend.dev>";
             if (resendFromEnv) {
               if (resendFromEnv.includes("<")) {
                 fromAddress = resendFromEnv;
               } else {
-                fromAddress = `Vaultly Reminders <${resendFromEnv}>`;
+                fromAddress = `Vaulty Reminders <${resendFromEnv}>`;
               }
             }
 
@@ -174,7 +174,7 @@ export const checkWarrantyReminders = inngest.createFunction(
           <!-- Header -->
           <tr>
             <td style="padding:24px 32px; border-bottom:1px solid #27272a; background-color:#09090b;">
-              <span style="font-size:24px; font-weight:800; color:#a3e635; letter-spacing:-0.5px;">Vaultly</span>
+              <span style="font-size:24px; font-weight:800; color:#a3e635; letter-spacing:-0.5px;">Vaulty</span>
             </td>
           </tr>
 
@@ -186,7 +186,7 @@ export const checkWarrantyReminders = inngest.createFunction(
                 ${headlineText}
               </h1>
               <p style="margin:0 0 24px 0; font-size:15px; line-height:1.5; color:#a1a1aa;">
-                Hello ${user.firstName || "there"}, here are the product and warranty details recorded in your Vaultly vault:
+                Hello ${user.firstName || "there"}, here are the product and warranty details recorded in your Vaulty vault:
               </p>
 
               <!-- Details Block -->
@@ -243,7 +243,7 @@ export const checkWarrantyReminders = inngest.createFunction(
                 <a href="${settingsUrl}" target="_blank" style="color:#a3e635; text-decoration:underline;">Manage reminder preferences</a>
               </p>
               <p style="margin:0; font-size:12px; color:#71717a;">
-                Sent automatically by Vaultly Warranty Assistant. Never lose a receipt or warranty again.
+                Sent automatically by Vaulty Warranty Assistant. Never lose a receipt or warranty again.
               </p>
             </td>
           </tr>

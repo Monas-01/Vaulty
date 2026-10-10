@@ -11,14 +11,14 @@ const features = [
     icon: IconReceipt,
     title: "AI reads your receipt",
     description:
-      "Snap a photo and Vaultly pulls out the store, product, price, and purchase date — ready for you to review and save.",
+      "Snap a photo and Vaulty pulls out the store, product, price, and purchase date — ready for you to review and save.",
     iconBg: "bg-accent-cyan-pale text-accent-cyan",
   },
   {
     icon: IconBellRinging,
     title: "Warranty reminders before it's too late",
     description:
-      "Vaultly tracks every warranty end date and nudges you while you still have time to claim or extend coverage.",
+      "Vaulty tracks every warranty end date and nudges you while you still have time to claim or extend coverage.",
     iconBg: "bg-accent-orange-pale text-accent-orange",
   },
   {
@@ -43,7 +43,7 @@ export function LandingFeatures() {
             Everything you buy, organized automatically
           </h2>
           <p className="mt-lg max-w-[480px] text-body-lg text-body">
-            From upload to reminder, Vaultly handles the busywork so you can focus
+            From upload to reminder, Vaulty handles the busywork so you can focus
             on using what you bought — not hunting for paperwork.
           </p>
         </div>
