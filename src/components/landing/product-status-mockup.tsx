@@ -1,7 +1,3 @@
-"use client";
-
-import { motion } from "motion/react";
-
 import { cn } from "@/lib/utils";
 
 const products = [
@@ -37,10 +33,7 @@ interface ProductStatusMockupProps {
 
 export function ProductStatusMockup({ className }: ProductStatusMockupProps) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.1 }}
+    <div
       className={cn(
         "card-content flex h-[400px] w-[340px] shrink-0 flex-col gap-md overflow-hidden p-xl",
         className,
@@ -52,12 +45,9 @@ export function ProductStatusMockup({ className }: ProductStatusMockupProps) {
       </div>
 
       <ul className="flex min-h-0 flex-1 flex-col gap-sm">
-        {products.map((product, index) => (
-          <motion.li
+        {products.map((product) => (
+          <li
             key={product.name}
-            initial={{ opacity: 0, x: 12 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.35, delay: 0.2 + index * 0.1 }}
             className="flex items-center justify-between gap-md rounded-xl bg-surface-muted px-lg py-md"
           >
             <div className="min-w-0">
@@ -69,7 +59,7 @@ export function ProductStatusMockup({ className }: ProductStatusMockupProps) {
             <span className={cn(badgeClass[product.badge], "shrink-0")}>
               {product.label}
             </span>
-          </motion.li>
+          </li>
         ))}
       </ul>
 
@@ -79,6 +69,6 @@ export function ProductStatusMockup({ className }: ProductStatusMockupProps) {
           Sony headphones warranty — 12 days left
         </p>
       </div>
-    </motion.div>
+    </div>
   );
 }
