@@ -28,8 +28,8 @@ export const metadata: Metadata = {
     canonical: "/",
   },
   title: {
-    default: "Vaultly | Never Lose a Receipt or Warranty Again",
-    template: "%s | Vaultly",
+    default: "Vaulty | Never Lose a Receipt or Warranty Again",
+    template: "%s | Vaulty",
   },
   description:
     "Store receipts, invoices, and warranty documents in one secure vault. AI extracts the details, tracks warranty expiry, and reminds you before it runs out.",
@@ -41,17 +41,17 @@ export const metadata: Metadata = {
     "warranty expiration reminder",
   ],
   openGraph: {
-    title: "Vaultly: Never Lose a Receipt Again",
+    title: "Vaulty: Never Lose a Receipt Again",
     description:
       "Store receipts, invoices, and warranty documents. AI extracts the details, tracks your warranty, and reminds you before it expires.",
     url: siteUrl,
-    siteName: "Vaultly",
+    siteName: "Vaulty",
     images: [
       {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "Vaultly receipt and warranty tracker",
+        alt: "Vaulty receipt and warranty tracker",
       },
     ],
     locale: "en_US",
@@ -59,7 +59,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Vaultly: Never Lose a Receipt Again",
+    title: "Vaulty: Never Lose a Receipt Again",
     description:
       "Store receipts, invoices, and warranty documents. AI extracts the details, tracks your warranty, and reminds you before it expires.",
     images: ["/og-image.png"],

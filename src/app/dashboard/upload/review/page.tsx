@@ -56,7 +56,7 @@ export default function DashboardUploadReviewPage() {
 
   useEffect(() => {
     try {
-      const storedData = sessionStorage.getItem("vaultly_extracted_receipt");
+      const storedData = sessionStorage.getItem("vaulty_extracted_receipt");
       if (!storedData) {
         toast.error("No extracted receipt data found. Please upload a receipt.");
         router.push("/dashboard/upload");
@@ -199,7 +199,7 @@ export default function DashboardUploadReviewPage() {
       const savedCount = res.count || validatedPayloads.length;
 
       toast.success(`${savedCount} product${savedCount > 1 ? "s" : ""} saved from this receipt.`);
-      sessionStorage.removeItem("vaultly_extracted_receipt");
+      sessionStorage.removeItem("vaulty_extracted_receipt");
 
       router.push("/dashboard/products");
       router.refresh();
@@ -263,7 +263,7 @@ export default function DashboardUploadReviewPage() {
               </span>
             </div>
             <p className="mt-xs text-body-md text-body">
-              Vaultly AI detected line items from your receipt. Uncheck any item you don&apos;t wish to save, or edit details directly.
+              Vaulty AI detected line items from your receipt. Uncheck any item you don&apos;t wish to save, or edit details directly.
             </p>
           </div>
 

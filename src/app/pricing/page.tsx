@@ -32,14 +32,14 @@ export default function PricingPage() {
               </h1>
 
               <p className="mt-xl max-w-[480px] text-body-lg text-body">
-                Vaultly is free for everyone right now — no credit card, no trial
+                Vaulty is free for everyone right now — no credit card, no trial
                 countdown, no catch. We&apos;re focused on making the product great
                 before we think about charging for it.
               </p>
 
               <p className="mt-xl max-w-[480px] text-body-sm text-mute">
                 We may introduce paid plans for power users in the future, but
-                everyone using Vaultly today will be notified well in advance before
+                everyone using Vaulty today will be notified well in advance before
                 anything changes.
               </p>
             </div>

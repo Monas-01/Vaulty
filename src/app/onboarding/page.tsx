@@ -37,13 +37,13 @@ export default function OnboardingPage() {
       <div className="mb-xl flex flex-col items-center gap-sm">
         <Link href="/" className="flex items-center gap-sm transition-opacity hover:opacity-90">
           <Logo size={56} priority />
-          <span className="text-body-md-strong text-ink text-xl">Vaultly</span>
+          <span className="text-body-md-strong text-ink text-xl">Vaulty</span>
         </Link>
       </div>
 
       <div className="card-content w-full max-w-[480px]">
         <div className="mb-xl text-center">
-          <h1 className="text-display-sm text-ink">Welcome to Vaultly!</h1>
+          <h1 className="text-display-sm text-ink">Welcome to Vaulty!</h1>
           <p className="mt-xs text-body-md text-mute">
             Let&apos;s set up your vault in a few seconds.
           </p>

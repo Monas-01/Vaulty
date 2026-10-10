@@ -19,7 +19,7 @@ export function LandingNav() {
       <div className="mx-auto flex h-[72px] max-w-6xl w-full items-center justify-between px-lg md:px-xl">
         <Link href="/" className="flex items-center transition-opacity hover:opacity-90" style={{ gap: "10px" }}>
           <Logo size={48} priority />
-          <span style={{ fontSize: "22px", fontWeight: 700, lineHeight: 1 }} className="text-ink">Vaultly</span>
+          <span style={{ fontSize: "22px", fontWeight: 700, lineHeight: 1 }} className="text-ink">Vaulty</span>
         </Link>
 
         <nav className="hidden items-center gap-xl md:flex" aria-label="Main">

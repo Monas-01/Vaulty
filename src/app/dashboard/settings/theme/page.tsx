@@ -48,7 +48,7 @@ export default function ThemeSettingsPage() {
       <div className="w-full">
         <h2 className="text-body-md-strong text-ink w-full">Appearance & Theme</h2>
         <p className="mt-xxs text-body-sm text-body w-full">
-          Choose your preferred theme across all Vaultly pages and dashboard views.
+          Choose your preferred theme across all Vaulty pages and dashboard views.
         </p>
       </div>
 

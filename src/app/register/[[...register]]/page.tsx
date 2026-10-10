@@ -9,7 +9,7 @@ export default function RegisterPage() {
       <div className="mb-xl flex flex-col items-center gap-sm">
         <Link href="/" className="flex items-center gap-sm transition-opacity hover:opacity-90">
           <Logo size={56} priority />
-          <span className="text-body-md-strong text-ink text-xl">Vaultly</span>
+          <span className="text-body-md-strong text-ink text-xl">Vaulty</span>
         </Link>
       </div>
 

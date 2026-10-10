@@ -11,7 +11,7 @@ export function Logo({ size = 34, className, priority }: LogoProps) {
   return (
     <Image
       src="/logo.png"
-      alt="Vaultly"
+      alt="Vaulty"
       width={size}
       height={size}
       priority={priority}

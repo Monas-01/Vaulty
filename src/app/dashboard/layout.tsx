@@ -28,7 +28,7 @@ export default async function DashboardLayout({
             className="flex items-center gap-sm transition-opacity hover:opacity-90"
           >
             <Logo size={34} />
-            <span className="text-body-md-strong text-ink">Vaultly</span>
+            <span className="text-body-md-strong text-ink">Vaulty</span>
           </Link>
         </div>
 
